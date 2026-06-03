@@ -1,0 +1,7 @@
+[
+    {
+        "directory": "C:/Users/11451/Desktop/miku pet/build",
+        "command": "cl.exe /I D:/Qt/6.11.1/msvc2022_64/include /I D:/Qt/6.11.1/msvc2022_64/include/QtCore /I D:/Qt/6.11.1/msvc2022_64/include/QtGui /I D:/Qt/6.11.1/msvc2022_64/include/QtWidgets /I D:/Qt/6.11.1/msvc2022_64/include/QtMultimedia /I D:/Qt/6.11.1/msvc2022_64/include/QtNetwork /I D:/Qt/6.11.1/msvc2022_64/include/QtTextToSpeech /c main.cpp",
+        "file": "main.cpp"
+    }
+]
