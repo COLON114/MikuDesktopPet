@@ -82,3 +82,4 @@ CMakeLists.txt.user*
 /build*/
  
 config.json
+chat_log.txt

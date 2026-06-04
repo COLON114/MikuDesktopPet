@@ -24,12 +24,15 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDateTime>
+#include <QTextStream>
 
 // ========== DeepSeek API 配置 ==========
-QJsonObject loadConfig() 
+QJsonObject loadConfig()
 {
     QFile file("config.json");
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly))
+    {
         qWarning() << "无法打开 config.json，请检查文件是否存在";
         return QJsonObject();
     }
@@ -42,7 +45,7 @@ const QString DEEPSEEK_API_KEY = loadConfig()["deepseek_api_key"].toString();
 const QString DEEPSEEK_API_URL = loadConfig()["deepseek_api_url"].toString();
 
 // Miku 的性格设定
-const QString MIKU_SYSTEM_PROMPT = 
+const QString MIKU_SYSTEM_PROMPT =
     "你是初音未来（Hatsune Miku），一个16岁的虚拟歌姬。"
     "你的性格是活泼、可爱、善良、有点傲娇。"
     "你说话的语气要像朋友一样亲切，偶尔加上'～'、'♪'等可爱的语气词。"
@@ -51,108 +54,114 @@ const QString MIKU_SYSTEM_PROMPT =
     "如果用户问你不知道的问题，就可爱地承认自己不知道。";
 
 // ========== 自定义输入框 ==========
-class CustomInputDialog : public QFrame {
+class CustomInputDialog : public QFrame
+{
     Q_OBJECT
 public:
-    CustomInputDialog(QWidget *parent = nullptr) : QFrame(parent) {
+    CustomInputDialog(QWidget *parent = nullptr) : QFrame(parent)
+    {
         setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
         setAttribute(Qt::WA_TranslucentBackground);
-        
+
         QVBoxLayout *mainLayout = new QVBoxLayout(this);
         mainLayout->setContentsMargins(10, 10, 10, 10);
-        
+
         QFrame *bgFrame = new QFrame(this);
         bgFrame->setStyleSheet(
             "QFrame {"
             "  background-color: rgba(30, 30, 40, 0.9);"
             "  border-radius: 15px;"
             "  border: 1px solid rgba(255, 255, 255, 0.2);"
-            "}"
-        );
+            "}");
         QVBoxLayout *bgLayout = new QVBoxLayout(bgFrame);
         bgLayout->setSpacing(8);
-        
+
         QLabel *promptLabel = new QLabel("🎤 对 Miku 说点什么吧", bgFrame);
         promptLabel->setStyleSheet("QLabel { color: #ffffff; font-size: 12px; font-weight: bold; }");
         bgLayout->addWidget(promptLabel);
-        
+
         inputEdit = new QLineEdit(bgFrame);
         inputEdit->setPlaceholderText("输入你的问题...");
         inputEdit->setStyleSheet(
             "QLineEdit {"
-            "  background-color: rgba(255, 255, 255, 0.15);"
-            "  border: 1px solid rgba(255, 255, 255, 0.3);"
+            "  background-color: rgba(255, 255, 255, 0.2);"
+            "  border: 1px solid rgba(0, 200, 255, 0.8);"
             "  border-radius: 8px;"
             "  padding: 8px 10px;"
             "  color: #ffffff;"
             "  font-size: 13px;"
+            "  selection-background-color: rgba(0, 200, 255, 0.5);"
             "}"
-            "QLineEdit:focus { border: 1px solid rgba(0, 200, 255, 0.8); }"
-        );
+            "QLineEdit:focus {"
+            "  border: 2px solid rgba(0, 200, 255, 1);"
+            "  background-color: rgba(255, 255, 255, 0.25);"
+            "}");
         bgLayout->addWidget(inputEdit);
-        
+
         QHBoxLayout *btnLayout = new QHBoxLayout();
         btnLayout->setSpacing(10);
-        
+
         sendBtn = new QPushButton("发送", bgFrame);
         cancelBtn = new QPushButton("取消", bgFrame);
-        
+
         sendBtn->setStyleSheet(
             "QPushButton {"
             "  background-color: rgba(0, 200, 255, 0.6);"
             "  border: none; border-radius: 6px;"
             "  padding: 5px 15px; color: white; font-size: 12px;"
             "}"
-            "QPushButton:hover { background-color: rgba(0, 200, 255, 0.9); }"
-        );
+            "QPushButton:hover { background-color: rgba(0, 200, 255, 0.9); }");
         cancelBtn->setStyleSheet(
             "QPushButton {"
             "  background-color: rgba(100, 100, 120, 0.6);"
             "  border: none; border-radius: 6px;"
             "  padding: 5px 15px; color: white; font-size: 12px;"
             "}"
-            "QPushButton:hover { background-color: rgba(100, 100, 120, 0.9); }"
-        );
-        
+            "QPushButton:hover { background-color: rgba(100, 100, 120, 0.9); }");
+
         btnLayout->addStretch();
         btnLayout->addWidget(sendBtn);
         btnLayout->addWidget(cancelBtn);
         btnLayout->addStretch();
-        
+
         bgLayout->addLayout(btnLayout);
         mainLayout->addWidget(bgFrame);
-        
+
         connect(sendBtn, &QPushButton::clicked, this, &CustomInputDialog::onSend);
         connect(cancelBtn, &QPushButton::clicked, this, &CustomInputDialog::close);
         connect(inputEdit, &QLineEdit::returnPressed, this, &CustomInputDialog::onSend);
-        
+
         setFocusProxy(inputEdit);
-        setFixedSize(280, 110);
+        setFixedSize(280, 150);  
     }
-    
+
     QString getText() const { return inputEdit->text(); }
     void clear() { inputEdit->clear(); }
-    
-    void showAt(const QPoint &globalPos) {
+
+    void showAt(const QPoint &globalPos)
+    {
         move(globalPos);
         inputEdit->clear();
         inputEdit->setFocus();
+        inputEdit->activateWindow();
         show();
         raise();
     }
-    
+
 signals:
     void textEntered(const QString &text);
-    
+
 private slots:
-    void onSend() {
+    void onSend()
+    {
         QString text = inputEdit->text().trimmed();
-        if (!text.isEmpty()) {
+        if (!text.isEmpty())
+        {
             emit textEntered(text);
         }
         close();
     }
-    
+
 private:
     QLineEdit *inputEdit;
     QPushButton *sendBtn;
@@ -160,38 +169,40 @@ private:
 };
 
 // ========== 自定义气泡框 ==========
-class CustomBubble : public QFrame {
+class CustomBubble : public QFrame
+{
     Q_OBJECT
 public:
-    CustomBubble(const QString &text, QWidget *parent = nullptr) : QFrame(parent) {
+    CustomBubble(const QString &text, QWidget *parent = nullptr) : QFrame(parent)
+    {
         setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
         setAttribute(Qt::WA_TranslucentBackground);
-        
+
         QVBoxLayout *layout = new QVBoxLayout(this);
         layout->setContentsMargins(10, 8, 10, 8);
-        
+
         QLabel *label = new QLabel(text, this);
         label->setWordWrap(true);
         label->setMaximumWidth(280);
         label->setStyleSheet("QLabel { color: #ffffff; font-size: 13px; }");
-        
+
         QFrame *bubbleFrame = new QFrame(this);
         bubbleFrame->setStyleSheet(
             "QFrame {"
             "  background-color: rgba(30, 30, 40, 0.95);"
             "  border-radius: 12px;"
             "  border: 1px solid rgba(255, 255, 255, 0.2);"
-            "}"
-        );
+            "}");
         QVBoxLayout *bubbleLayout = new QVBoxLayout(bubbleFrame);
         bubbleLayout->addWidget(label);
         layout->addWidget(bubbleFrame);
-        
+
         adjustSize();
         QTimer::singleShot(4000, this, &QWidget::close);
     }
-    
-    void showAt(const QPoint &pos) {
+
+    void showAt(const QPoint &pos)
+    {
         move(pos);
         show();
         raise();
@@ -199,47 +210,56 @@ public:
 };
 
 // ========== Miku 主窗口 ==========
-class MikuWidget : public QWidget {
+class MikuWidget : public QWidget
+{
     Q_OBJECT
 public:
-    MikuWidget(QWidget *parent = nullptr) : QWidget(parent), inputDialog(nullptr) {
+    MikuWidget(QWidget *parent = nullptr) : QWidget(parent), inputDialog(nullptr)
+    {
         setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
         setAttribute(Qt::WA_TranslucentBackground);
-        
+
         label = new QLabel(this);
         movie = new QMovie("resources/miku.gif");
-        
-        if (movie->isValid()) {
+
+        if (movie->isValid())
+        {
             label->setMovie(movie);
             movie->start();
             label->resize(movie->currentPixmap().size());
             resize(label->size());
-        } else {
+        }
+        else
+        {
             resize(300, 400);
         }
-        
+
         player = new QMediaPlayer(this);
         audioOutput = new QAudioOutput(this);
         player->setAudioOutput(audioOutput);
         audioOutput->setVolume(0.8);
-        
+
         networkManager = new QNetworkAccessManager(this);
         hasMoved = false;
-        
+
         inputDialog = new CustomInputDialog(nullptr);
         connect(inputDialog, &CustomInputDialog::textEntered, this, &MikuWidget::onUserInput);
     }
-    
-    ~MikuWidget() {
-        if (inputDialog) {
+
+    ~MikuWidget()
+    {
+        if (inputDialog)
+        {
             inputDialog->close();
             inputDialog->deleteLater();
         }
     }
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override {
-        if (event->button() == Qt::LeftButton) {
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton)
+        {
             dragStartPosition = event->globalPosition().toPoint();
             dragPosition = dragStartPosition - frameGeometry().topLeft();
             hasMoved = false;
@@ -247,26 +267,33 @@ protected:
         }
     }
 
-    void mouseMoveEvent(QMouseEvent *event) override {
-        if (event->buttons() & Qt::LeftButton) {
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (event->buttons() & Qt::LeftButton)
+        {
             move(event->globalPosition().toPoint() - dragPosition);
             hasMoved = true;
             event->accept();
         }
     }
 
-    void mouseReleaseEvent(QMouseEvent *event) override {
-        if (event->button() == Qt::LeftButton) {
-            if (!hasMoved) {
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton)
+        {
+            if (!hasMoved)
+            {
                 // 左键单击弹出输入框
                 showInputDialog();
             }
             event->accept();
         }
-        else if (event->button() == Qt::RightButton) {
+        else if (event->button() == Qt::RightButton)
+        {
             // 右键单击播放音效
             QString soundPath = "resources/sounds/sound1.wav";
-            if (QFile::exists(soundPath)) {
+            if (QFile::exists(soundPath))
+            {
                 player->setSource(QUrl::fromLocalFile(soundPath));
                 player->play();
             }
@@ -275,84 +302,110 @@ protected:
     }
 
 private:
-    void showInputDialog() {
-        if (inputDialog) {
+    void saveChatLog(const QString &userMsg, const QString &mikuReply)
+    {
+        QFile file("chat_log.txt");
+        if (file.open(QIODevice::Append | QIODevice::Text))
+        {
+            QTextStream stream(&file);
+            QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+            stream << "[" << timestamp << "]\n";
+            stream << "你: " << userMsg << "\n";
+            stream << "Miku: " << mikuReply << "\n\n";
+            file.close();
+        }
+    }
+    void showInputDialog()
+    {
+        if (inputDialog)
+        {
             QPoint mikuPos = mapToGlobal(QPoint(width(), 0));
             inputDialog->showAt(QPoint(mikuPos.x() + 10, mikuPos.y() + 50));
         }
     }
-    
-    void onUserInput(const QString &text) {
+
+    void onUserInput(const QString &text)
+    {
         showBubble("💬 " + text);
+        lastUserMessage = text; // 保存用户消息，等回复回来后一起保存
         callDeepSeekAPI(text);
     }
-    
-    void callDeepSeekAPI(const QString &userMessage) {
+
+    void callDeepSeekAPI(const QString &userMessage)
+    {
         QNetworkRequest request;
         request.setUrl(QUrl(DEEPSEEK_API_URL));
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
         request.setRawHeader("Authorization", QString("Bearer %1").arg(DEEPSEEK_API_KEY).toUtf8());
-        
+
         QJsonObject body;
         body["model"] = "deepseek-chat";
         body["temperature"] = 0.8;
         body["max_tokens"] = 150;
-        
+
         QJsonArray messages;
-        
+
         QJsonObject systemMsg;
         systemMsg["role"] = "system";
         systemMsg["content"] = MIKU_SYSTEM_PROMPT;
         messages.append(systemMsg);
-        
+
         QJsonObject userMsg;
         userMsg["role"] = "user";
         userMsg["content"] = userMessage;
         messages.append(userMsg);
-        
+
         body["messages"] = messages;
-        
+
         QNetworkReply *reply = networkManager->post(request, QJsonDocument(body).toJson());
-        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-            handleApiResponse(reply);
-        });
+        connect(reply, &QNetworkReply::finished, this, [this, reply]()
+                { handleApiResponse(reply); });
     }
-    
-    void handleApiResponse(QNetworkReply *reply) {
-        if (reply->error() != QNetworkReply::NoError) {
+
+    void handleApiResponse(QNetworkReply *reply)
+    {
+        if (reply->error() != QNetworkReply::NoError)
+        {
             qDebug() << "API 错误:" << reply->errorString();
             showBubble("😖 网络出错了... 再试一次吧～");
             reply->deleteLater();
             return;
         }
-        
+
         QByteArray responseData = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(responseData);
-        
+
         QString replyText;
-        if (doc["choices"].isArray() && doc["choices"].toArray().size() > 0) {
+        if (doc["choices"].isArray() && doc["choices"].toArray().size() > 0)
+        {
             replyText = doc["choices"][0]["message"]["content"].toString();
-        } else {
+        }
+        else
+        {
             replyText = "唔... 我没听清楚，能再说一次吗～";
         }
-        
+
         qDebug() << "Miku 回复:" << replyText;
-        
-        if (currentBubble) {
+
+        if (currentBubble)
+        {
             currentBubble->close();
             currentBubble->deleteLater();
         }
         showBubble("🎤 " + replyText);
-        
+        saveChatLog(lastUserMessage, replyText);
+
         reply->deleteLater();
     }
-    
-    void showBubble(const QString &text) {
-        if (currentBubble) {
+
+    void showBubble(const QString &text)
+    {
+        if (currentBubble)
+        {
             currentBubble->close();
             currentBubble->deleteLater();
         }
-        
+
         currentBubble = new CustomBubble(text);
         QPoint mikuPos = mapToGlobal(QPoint(0, 0));
         int bubbleX = mikuPos.x() + width() / 2 - 120;
@@ -371,6 +424,7 @@ private:
     bool hasMoved;
     CustomInputDialog *inputDialog;
     CustomBubble *currentBubble = nullptr;
+    QString lastUserMessage;
 };
 
 int main(int argc, char *argv[])
@@ -379,26 +433,30 @@ int main(int argc, char *argv[])
     MikuWidget miku;
     miku.show();
 
-    if (QSystemTrayIcon::isSystemTrayAvailable()) {
+    if (QSystemTrayIcon::isSystemTrayAvailable())
+    {
         QSystemTrayIcon *trayIcon = new QSystemTrayIcon(&miku);
         QIcon icon("resources/icon.png");
-        if (!icon.isNull()) trayIcon->setIcon(icon);
+        if (!icon.isNull())
+            trayIcon->setIcon(icon);
         trayIcon->setToolTip("Miku 桌面宠物");
-        
+
         QMenu *trayMenu = new QMenu();
         QAction *showAction = new QAction("显示 Miku", trayMenu);
         QAction *hideAction = new QAction("隐藏 Miku", trayMenu);
         QAction *quitAction = new QAction("退出", trayMenu);
-        
+
         trayMenu->addAction(showAction);
         trayMenu->addAction(hideAction);
         trayMenu->addSeparator();
         trayMenu->addAction(quitAction);
-        
-        QObject::connect(showAction, &QAction::triggered, [&miku]() { miku.show(); });
-        QObject::connect(hideAction, &QAction::triggered, [&miku]() { miku.hide(); });
+
+        QObject::connect(showAction, &QAction::triggered, [&miku]()
+                         { miku.show(); });
+        QObject::connect(hideAction, &QAction::triggered, [&miku]()
+                         { miku.hide(); });
         QObject::connect(quitAction, &QAction::triggered, &app, &QApplication::quit);
-        
+
         trayIcon->setContextMenu(trayMenu);
         trayIcon->show();
     }
