@@ -17,6 +17,7 @@ set(CMAKE_AUTOMOC ON)
 # 添加所有源文件和头文件
 qt_add_executable(Miku
     main.cpp
+    SettingsManager.cpp
 )
 
 target_link_libraries(Miku PRIVATE 

@@ -26,6 +26,8 @@
 #include <QJsonArray>
 #include <QDateTime>
 #include <QTextStream>
+#include <QCloseEvent>
+#include "SettingsManager.h"
 
 // ========== DeepSeek API 配置 ==========
 QJsonObject loadConfig()
@@ -132,7 +134,7 @@ public:
         connect(inputEdit, &QLineEdit::returnPressed, this, &CustomInputDialog::onSend);
 
         setFocusProxy(inputEdit);
-        setFixedSize(280, 150);  
+        setFixedSize(280, 150);
     }
 
     QString getText() const { return inputEdit->text(); }
@@ -214,11 +216,18 @@ class MikuWidget : public QWidget
 {
     Q_OBJECT
 public:
+    bool isAutoStartEnabled() const
+    {
+        return settingsManager->isAutoStartEnabled();
+    }
+    void setAutoStart(bool enable)
+    {
+        settingsManager->setAutoStart(enable);
+    }
     MikuWidget(QWidget *parent = nullptr) : QWidget(parent), inputDialog(nullptr)
     {
         setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
         setAttribute(Qt::WA_TranslucentBackground);
-
         label = new QLabel(this);
         movie = new QMovie("resources/miku.gif");
 
@@ -244,6 +253,12 @@ public:
 
         inputDialog = new CustomInputDialog(nullptr);
         connect(inputDialog, &CustomInputDialog::textEntered, this, &MikuWidget::onUserInput);
+        settingsManager = new SettingsManager(this);
+        QPoint lastPos = settingsManager->loadWindowPosition();
+        if (!lastPos.isNull())
+        {
+            move(lastPos);
+        }
     }
 
     ~MikuWidget()
@@ -256,6 +271,11 @@ public:
     }
 
 protected:
+    void closeEvent(QCloseEvent *event) override
+    {
+        settingsManager->saveWindowPosition(pos());
+        QWidget::closeEvent(event);
+    }
     void mousePressEvent(QMouseEvent *event) override
     {
         if (event->button() == Qt::LeftButton)
@@ -425,6 +445,7 @@ private:
     CustomInputDialog *inputDialog;
     CustomBubble *currentBubble = nullptr;
     QString lastUserMessage;
+    SettingsManager *settingsManager;
 };
 
 int main(int argc, char *argv[])
@@ -445,9 +466,14 @@ int main(int argc, char *argv[])
         QAction *showAction = new QAction("显示 Miku", trayMenu);
         QAction *hideAction = new QAction("隐藏 Miku", trayMenu);
         QAction *quitAction = new QAction("退出", trayMenu);
+        QAction *autoStartAction = new QAction("开机自启", trayMenu);
+        autoStartAction->setCheckable(true);
+        autoStartAction->setChecked(miku.isAutoStartEnabled());
 
         trayMenu->addAction(showAction);
         trayMenu->addAction(hideAction);
+        trayMenu->addSeparator();
+        trayMenu->addAction(autoStartAction); // 加这行
         trayMenu->addSeparator();
         trayMenu->addAction(quitAction);
 
@@ -456,6 +482,9 @@ int main(int argc, char *argv[])
         QObject::connect(hideAction, &QAction::triggered, [&miku]()
                          { miku.hide(); });
         QObject::connect(quitAction, &QAction::triggered, &app, &QApplication::quit);
+        QObject::
+            connect(autoStartAction, &QAction::toggled, [&miku](bool checked)
+                    { miku.setAutoStart(checked); });
 
         trayIcon->setContextMenu(trayMenu);
         trayIcon->show();
